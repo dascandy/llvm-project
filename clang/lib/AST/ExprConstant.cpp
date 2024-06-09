@@ -6302,6 +6302,7 @@ static bool EvaluatePreContracts(const FunctionDecl* Callee, EvalInfo& Info) {
     }
     if (!Desired) {
       Info.CCEDiag(E, diag::note_constexpr_contract_failure);
+      return false;
     }
   }
   return true;
@@ -6315,6 +6316,7 @@ static bool EvaluatePostContracts(const FunctionDecl* Callee, EvalInfo& Info) {
     }
     if (!Desired) {
       Info.CCEDiag(E, diag::note_constexpr_contract_failure);
+      return false;
     }
   }
   return true;
@@ -6365,10 +6367,14 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
                                         Frame.LambdaThisCaptureField);
   }
 
-  EvaluatePreContracts(Callee, Info);
+  if (!EvaluatePreContracts(Callee, Info))
+    return false;
+
   StmtResult Ret = {Result, ResultSlot};
   EvalStmtResult ESR = EvaluateStmt(Ret, Info, Body);
-  EvaluatePostContracts(Callee, Info);
+  if (!EvaluatePostContracts(Callee, Info))
+    return false;
+
   if (ESR == ESR_Succeeded) {
     if (Callee->getReturnType()->isVoidType())
       return true;
@@ -15544,6 +15550,7 @@ public:
       }
       if (!Desired) {
         Info.CCEDiag(E->getArg(0), diag::note_constexpr_contract_failure);
+        return false;
       }
       return true;
     }
